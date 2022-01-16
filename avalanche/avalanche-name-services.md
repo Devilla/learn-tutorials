@@ -71,7 +71,7 @@ For Fuji Testnet:
     }
 ```
 
-First, let's deploy the registry contracts with '.avax'
+First, let's deploy the registry contracts with '.avax' in directory `contracts/registry/`
 
 ```
 const { ethers } = require("hardhat");
@@ -107,7 +107,7 @@ module.exports.dependencies = ['registry']
 ```
 
 
-BaseRegistrar contracts as `namehash.hash('avax')` for `.avax` as top-level domain for registration.
+Deploy BaseRegistrar contracts for `.avax` as top-level domain for registration from directory `contracts/ethregistrar/`.
 
 ```
 // import the libraries and utils
@@ -150,4 +150,41 @@ module.exports = async ({getNamedAccounts, deployments, network}) => {
 module.exports.tags = ['baseregistrar'];
 module.exports.dependencies = ['registry']
 ```
+Deploy `ETHRegistrarController` with  `StablePriceOracle` contracts for '.avax' as root domain
+```
+const { ethers } = require("hardhat");
+const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000"
+
+const sha3 = require('web3-utils').sha3;
+module.exports = async ({getNamedAccounts, deployments, network}) => {
+    const {deploy} = deployments;
+    const {deployer, owner} = await getNamedAccounts();
+
+    const baseRegistrar = await ethers.getContract('BaseRegistrarImplementation');
+
+    const priceOracle = await ethers.getContract('StablePriceOracle')
+
+    // Deploy ETHRegistrarController contract base registrar and price oracale
+    await deploy('ETHRegistrarController', {
+        from: deployer, 
+        args: [baseRegistrar.address, priceOracle.address, 600, 86400],
+        log: true
+    })  
+
+    const controller = await ethers.getContract('ETHRegistrarController')
+    const ens = await ethers.getContract('ENSRegistry')
+    const transactions = []
+
+    transactions.push(await ens.setSubnodeOwner(ZERO_HASH,sha3('avax'),controller.address));
+    transactions.push(await baseRegistrar.addController(controller.address, {from: deployer}));
+    // ESTIMATE GAS -->
+    transactions.push(await controller.setPriceOracle(priceOracle.address, {from: deployer}));
+    console.log(`Waiting on settings to take place ${transactions.length}`)
+    await Promise.all(transactions.map((tx) => tx.wait()));
+}
+
+module.exports.tags = ['eth-registrar'];
+module.exports.dependencies = ['registry', 'oracles']
+```
+
 
