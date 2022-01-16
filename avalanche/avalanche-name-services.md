@@ -1,31 +1,27 @@
 # Introduction
 
-The Avalanche Name Service (ANS) is a distributed, open, and extensible naming system based on the
-Avalanche blockchain. ANS’s job is to map human-readable names like ‘dev.avax’ to machine-readable identifiers such as
-Avalanche C Chain addresses, other cryptocurrency addresses, content hashes, and metadata.
-ANS has similar goals to DNS, the Internet’s Domain Name Service, but has significantly different
-architecture due to the capabilities and constraints provided by the Avalanche blockchain. Like DNS, ANS
-operates on a system of dot-separated hierarchical names called domains, with the owner of a domain
-having full control over subdomains.
-Top-level domains, like ‘.avax’ and ‘.test’, are owned by smart contracts called registrars, which specify rules
-governing the allocation of their subdomains. Anyone may, by following the rules imposed by these registrar
+The Avalanche Name Service (ANS) is a decentralised naming system based on the
+Avalanche. ANS’s job is to map human-readable names like ‘dev.avax’ to machine-readable identifiers such as
+Avalanche C-Chain addresses, other cryptocurrency addresses, content hashes, and metadata.
+
+Top-level domaina ‘.avax’ is owned by smart contracts called registrars, which specify rules
+governing the allocation of its subdomains. Anyone may, by following the rules imposed by these registrar
 contracts, obtain ownership of a domain for their own use. ANS also supports importing in DNS names
 already owned by the user for use on ANS.
 Because of the hierarchal nature of ANS, anyone who owns a domain at any level may configure
 subdomains - for themselves or others - as desired. For instance, if Dev owns 'dev.avax', he can create
 'pay.dev.avax' and configure it as he desires.
-ANS is deployed on the Avalanche main network and on Fuji test networks.
-It's similar to ENS architecture since it's a fork but on Avalanche blockchain.
 
 # Prerequisites
 
 - [Avalanche](https://docs.avax.network/) is an EVM compatible blockchain which work on POS mechanism.
-- Familiarity with [Solidity](https://docs.soliditylang.org/) and [ReactJS](https://reactjs.org/) are recommended.
+- Familiarity with [Ethereum Name Services](https://docs.ens.domains/) is recommended.
 
 # Requirements
 
 * [NodeJS](https://nodejs.org/en)
 * [ReactJS](https://reactjs.org/)
+* [Solidity](https://docs.soliditylang.org/)
 * Hardhat, which you can install with `npm install -g hardhat`
 * Install [Metamask extension](https:// https://github.com/Devilla/ans-contractsmetamask.io/download.html) in your browser.
 
@@ -49,7 +45,7 @@ Install the required depencencies:
 yarn
 ```
 
-**Add Avalanche network config in `hardhat.config.ja`**
+**Add Avalanche network config in `hardhat.config.js`**
 
 For Development Network:
 ```
@@ -75,4 +71,83 @@ For Fuji Testnet:
     }
 ```
 
+First, let's deploy the registry contracts with '.avax'
+
+```
+const { ethers } = require("hardhat");
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000"
+const sha3 = require('web3-utils').sha3;
+
+module.exports = async ({getNamedAccounts, deployments, network}) => {
+    const {deploy} = deployments;
+    const {deployer, owner} = await getNamedAccounts();
+
+    const ens = await ethers.getContract('ENSRegistry')
+
+    await deploy('PublicResolver', {
+        from: deployer, 
+        args: [ens.address, ZERO_ADDRESS],
+        log: true
+    })
+
+    const resolver = await ethers.getContract('PublicResolver')
+
+    const transactions = []
+    transactions.push(await ens.setSubnodeOwner(ZERO_HASH, sha3('avax'), deployer))
+    transactions.push(await ens.setResolver(namehash.hash('avax'), resolver.address))
+    transactions.push(await resolver['setAddr(bytes32,address)'](namehash.hash('avax'), resolver.address))
+    console.log(`Waiting on settings to take place on resolvers ${transactions.length}`)
+    await Promise.all(transactions.map((tx) => tx.wait()));  
+
+}
+
+module.exports.tags = ['public-resolver'];
+module.exports.dependencies = ['registry']
+```
+
+
+BaseRegistrar contracts as `namehash.hash('avax')` for `.avax` as top-level domain for registration.
+
+```
+// import the libraries and utils
+const { ethers } = require("hardhat");
+const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
+const ethernal = require('hardhat-ethernal');
+
+const namehash = require('eth-ens-namehash');
+const sha3 = require('web3-utils').sha3;
+
+module.exports = async ({getNamedAccounts, deployments, network}) => {
+    const {deploy} = deployments;
+    const {deployer, owner} = await getNamedAccounts();
+    
+    // get ENSRegistry deployed contract
+    const ens = await ethers.getContract('ENSRegistry')
+    
+    // deploy BaseRegistrar with ENSRegistry and `avax` as TLD
+    await deploy('BaseRegistrarImplementation', {
+        from: deployer, 
+        args: [ens.address, namehash.hash('avax')],
+        log: true
+    })
+      
+    // get BaseRegistrar deployment
+    const base = await ethers.getContract('BaseRegistrarImplementation');
+
+    const transactions = []
+    // add controller for BaseRegistrar
+    transactions.push(await base.addController(deployer))
+    
+    // set SubnodeOwner for ENSRegistry with 'avax' as sha3 hash and BaseRegistrar deployment
+    transactions.push(await ens.setSubnodeOwner(ZERO_HASH, sha3('avax'), base.address))
+
+    console.log(`Waiting on ${transactions.length} transactions setting base registrar`);
+    await Promise.all(transactions.map((tx) => tx.wait()));
+}
+
+
+module.exports.tags = ['baseregistrar'];
+module.exports.dependencies = ['registry']
+```
 
