@@ -247,3 +247,188 @@ module.exports.tags = ['oracles'];
 module.exports.dependencies = ['registry']
 ```
 
+Deploy Reverse Registrar from deploy/publicresolver/00_deploy_reverse_resolver.js
+
+```
+const { ethers } = require("hardhat");
+ZERO_HASH= "0x0000000000000000000000000000000000000000000000000000000000000000"
+const sha3 = require('web3-utils').sha3;
+
+module.exports = async ({getNamedAccounts, deployments, network}) => {
+    const {deploy} = deployments;
+    const {deployer, owner} = await getNamedAccounts();
+
+    const ens = await ethers.getContract('ENSRegistry')
+
+    await deploy('DefaultReverseResolver', {
+        from: deployer, 
+        args: [ens.address],
+        log: true
+    })
+
+    const baseRegistrar = await ethers.getContract('BaseRegistrarImplementation')
+    const controller = await ethers.getContract('ETHRegistrarController')
+    const priceOracle = await ethers.getContract('StablePriceOracle')
+
+    const transactions = []
+
+    transactions.push(await ens.setSubnodeOwner(ZERO_HASH,sha3('avax'),controller.address));
+    transactions.push(await baseRegistrar.addController(controller.address, {from: deployer}));
+    // ESTIMATE GAS -->
+    transactions.push(await controller.setPriceOracle(priceOracle.address, {from: deployer}));
+    console.log(`Waiting on settings to take place on reverse-registrar ${transactions.length}`)
+    await Promise.all(transactions.map((tx) => tx.wait()));
+
+
+
+}
+
+module.exports.dependencies = ['registry', 'baseregistrar', 'eth-registrar']
+```
+
+Deploy Public Resolver from deploy/publicresolver/10_deploy_public_resolver.js
+
+```
+const { ethers } = require("hardhat");
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000"
+const sha3 = require('web3-utils').sha3;
+const namehash = require('eth-ens-namehash');
+module.exports = async ({getNamedAccounts, deployments, network}) => {
+    const {deploy} = deployments;
+    const {deployer, owner} = await getNamedAccounts();
+
+    const ens = await ethers.getContract('ENSRegistry')
+
+    await deploy('PublicResolver', {
+        from: deployer, 
+        args: [ens.address, ZERO_ADDRESS],
+        log: true
+    })
+
+    const resolver = await ethers.getContract('PublicResolver')
+    const ethregistrar = await ethers.getContract('ETHRegistrarController')
+
+    const transactions = []
+    transactions.push(await ens.setSubnodeOwner(ZERO_HASH, sha3('avax'), owner))
+    transactions.push(await ens.setResolver(namehash.hash('avax'), resolver.address))
+    transactions.push(await resolver['setAddr(bytes32,address)'](namehash.hash('avax'), resolver.address))
+    transactions.push(await resolver.setInterface(namehash.hash('avax'), "0x018fac06", ethregistrar.address))
+    console.log(`Waiting on settings to take place on resolvers ${transactions.length}`)
+    await Promise.all(transactions.map((tx) => tx.wait()));    
+
+}
+
+module.exports.tags = ['public-resolver'];
+module.exports.dependencies = ['registry', 'eth-registrar']
+```
+
+Deploy Regsitry from deploy/registry/00_deploy_registry.js
+
+```
+const { ethers } = require("hardhat");
+
+const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
+
+const ethernal = require('hardhat-ethernal');
+module.exports = async ({getNamedAccounts, deployments, network}) => {
+    const {deploy} = deployments;
+    const {deployer, owner} = await getNamedAccounts();
+
+    
+
+    if(network.tags.legacy) {
+        const contract = await deploy('LegacyENSRegistry', {
+            from: deployer,
+            args: [],
+            log: true,
+            contract: await deployments.getArtifact('ENSRegistry')
+        });
+        await deploy('ENSRegistry', {
+            from: deployer,
+            args: [contract.address],
+            log: true,
+            contract: await deployments.getArtifact('ENSRegistryWithFallback')
+        });    
+    } else {
+        await deploy('ENSRegistry', {
+            from: deployer,
+            args: [],
+            log: true,
+        }); 
+        
+    }
+
+    if(!network.tags.use_root) {
+        const registry = await ethers.getContract('ENSRegistry');
+        const rootOwner = await registry.owner(ZERO_HASH);
+        switch(rootOwner) {
+        case deployer:
+            const tx = await registry.setOwner(ZERO_HASH, owner, {from: deployer});
+            console.log("Setting final owner of root node on registry (tx:${tx.hash})...");
+            await tx.wait();
+            break;
+        case owner:
+            break;
+        default:
+            console.log(`WARNING: ENS registry root is owned by ${rootOwner}; cannot transfer to owner`);
+        }
+    }
+
+    return true;
+};
+module.exports.tags = ['registry'];
+module.exports.id = "ens";
+```
+
+Deploy Root from deploy/root/00_deploy_root.js
+```
+const { ethers } = require("hardhat");
+
+const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
+module.exports = async ({getNamedAccounts, deployments, network}) => {
+    const {deploy} = deployments;
+    const {deployer, owner} = await getNamedAccounts();
+
+    if(!network.tags.use_root) {
+        return true;
+    }
+
+    const registry = await ethers.getContract('ENSRegistry');
+
+    await deploy('Root', {
+        from: deployer,
+        args: [registry.address],
+        log: true,
+    });
+
+    const root = await ethers.getContract('Root');
+
+    let tx = await registry.setOwner(ZERO_HASH, root.address);
+    console.log(`Setting owner of root node to root contract (tx: ${tx.hash})...`);
+    await tx.wait();
+    
+    const rootOwner = await root.owner();
+    switch(rootOwner) {
+    case deployer:
+        tx = await root.attach(deployer).transferOwnership(owner);
+        console.log(`Transferring root ownership to final owner (tx: ${tx.hash})...`);
+        await tx.wait();
+    case owner:
+        if(!await root.controllers(owner)) {
+            tx = await root.attach(owner).setController(owner, true);
+            console.log(`Setting final owner as controller on root contract (tx: ${tx.hash})...`);
+            await tx.wait();
+        }
+        break;
+    default:
+        console.log(`WARNING: Root is owned by ${rootOwner}; cannot transfer to owner account`);
+    }
+
+    return true;
+};
+module.exports.id = "root";
+module.exports.tags = ['root'];
+module.exports.dependencies = ['registry'];
+```
