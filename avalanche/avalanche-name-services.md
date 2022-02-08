@@ -1,16 +1,16 @@
 # Introduction
 
 The Avalanche Name Service (ANS) is a decentralised naming system based on the
-Avalanche. ANS’s job is to map human-readable names like ‘dev.avax’ to machine-readable identifiers such as
+Avalanche blockchain. ANS’s job is to map human-readable names like ‘dev.avax’ to machine-readable identifiers such as
 Avalanche C-Chain addresses, other cryptocurrency addresses, content hashes, and metadata.
 
-Top-level domaina ‘.avax’ is owned by smart contracts called registrars, which specify rules
+Top-level domains ‘.avax’ is owned by smart contracts called registrars, which specify rules
 governing the allocation of its subdomains. Anyone may, by following the rules imposed by these registrar
 contracts, obtain ownership of a domain for their own use. ANS also supports importing in DNS names
-already owned by the user for use on ANS.
+already owned by the user on ANS.
 Because of the hierarchal nature of ANS, anyone who owns a domain at any level may configure
-subdomains - for themselves or others - as desired. For instance, if Dev owns 'dev.avax', he can create
-'pay.dev.avax' and configure it as he desires.
+subdomains - for themselves or others - as desired. For instance, if Dev owns 'dev.avax', he can create like
+'iam.dev.avax' and configure it as he/she desires.
 
 # Prerequisites
 
@@ -151,11 +151,21 @@ module.exports.tags = ['baseregistrar'];
 module.exports.dependencies = ['registry']
 ```
 Deploy `ETHRegistrarController` with  `StablePriceOracle` contracts for '.avax' as root domain
+
+Import the ethers library from hardhat package
 ```
 const { ethers } = require("hardhat");
+```
+Create a zero hash constant for initalization of an address
+```
 const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000"
-
+```
+Import sha3 hashing method from web3-utils package
+```
 const sha3 = require('web3-utils').sha3;
+```
+
+```
 module.exports = async ({getNamedAccounts, deployments, network}) => {
     const {deploy} = deployments;
     const {deployer, owner} = await getNamedAccounts();
