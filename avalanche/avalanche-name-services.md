@@ -23,7 +23,7 @@ subdomains - for themselves or others - as desired. For instance, if Dev owns 'd
 * [ReactJS](https://reactjs.org/)
 * [Solidity](https://docs.soliditylang.org/)
 * Hardhat, which you can install with `npm install -g hardhat`
-* Install [Metamask extension](https:// https://github.com/Devilla/ans-contractsmetamask.io/download.html) in your browser.
+* Install [Metamask extension](https://metamask.io/) in your browser.
 
 # ANS Architecture
 
@@ -164,35 +164,58 @@ Import sha3 hashing method from web3-utils package
 ```
 const sha3 = require('web3-utils').sha3;
 ```
-
+Export module for deployment and initialize constants deployments, deployer, owner etc.
 ```
 module.exports = async ({getNamedAccounts, deployments, network}) => {
     const {deploy} = deployments;
     const {deployer, owner} = await getNamedAccounts();
+```
 
+Initialse constants `baseRegistrar` and `priceOracle` for BaseRegistrarImplementation and StablePriceOracle
+```
     const baseRegistrar = await ethers.getContract('BaseRegistrarImplementation');
 
     const priceOracle = await ethers.getContract('StablePriceOracle')
+```
 
-    // Deploy ETHRegistrarController contract base registrar and price oracale
+Deploy ETHRegistrarController contract with baseRegistrar and priceOracle
+```
     await deploy('ETHRegistrarController', {
         from: deployer, 
         args: [baseRegistrar.address, priceOracle.address, 600, 86400],
         log: true
-    })  
-
+    })
+```
+    
+Initialise constants *controller*, *ens* and *transactions* for *ETHRegistrarController*, *ENSRegistry* and transaction array
+```
     const controller = await ethers.getContract('ETHRegistrarController')
     const ens = await ethers.getContract('ENSRegistry')
     const transactions = []
+```
 
+Push transactions for controller to set ens SubnodeOwner for 'avax' on ZERO_HASH address
+```
     transactions.push(await ens.setSubnodeOwner(ZERO_HASH,sha3('avax'),controller.address));
+```
+Push transactions for baseRegistrar to  add controller 
+```
     transactions.push(await baseRegistrar.addController(controller.address, {from: deployer}));
-    // ESTIMATE GAS -->
+```
+
+Push transactions for controller to set PriceOracle using deployer
+```
     transactions.push(await controller.setPriceOracle(priceOracle.address, {from: deployer}));
+```
+add Promise, wait and log while waiting transactions to complete
+```
     console.log(`Waiting on settings to take place ${transactions.length}`)
     await Promise.all(transactions.map((tx) => tx.wait()));
 }
+```
 
+Export module tags as 'eth-registrar' and dependencies as 'registry', 'oracles'
+```
 module.exports.tags = ['eth-registrar'];
 module.exports.dependencies = ['registry', 'oracles']
 ```
