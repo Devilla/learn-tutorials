@@ -500,3 +500,165 @@ yarn deploy-local
 ```
 
 This will start up a GraphiQL interface at http://127.0.0.1:8000/ in your browser, check it for querying the data.
+
+or you can use Hosted Service provided by [thegraph protocol](https://thegraph.com/docs/en/hosted-service/what-is-hosted-service). Follow the docs and create your subgraph and add that in the `deploy` scrpts `package.json`.
+
+```    
+"deploy": "graph deploy --node https://api.thegraph.com/deploy/ devilla/ans --ipfs https://api.thegraph.com/ipfs/",
+```
+
+But before deploying, you need to map the contract ABIs and addresses for the fuji testnet in the `subgraph.yaml`
+```
+specVersion: 0.0.2
+description: >-
+  A secure & decentralized way to address resources on and off the blockchain
+  using simple, human-readable names. Access domains and transfer history.
+repository: 'https://github.com/Devilla/ans-subgraph'
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum/contract
+    name: ENSRegistry
+    network: fuji
+    source:
+      address: '0x36479f8eB17e2C7e05427E3c121E80ff3f8017C9'
+      abi: EnsRegistry
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      file: ./src/ensRegistry.ts
+      entities:
+        - Domain
+        - Account
+        - Resolver
+      abis:
+        - name: EnsRegistry
+          file: ./abis/Registry.json
+      eventHandlers:
+        - event: 'Transfer(indexed bytes32,address)'
+          handler: handleTransfer
+        - event: 'NewOwner(indexed bytes32,indexed bytes32,address)'
+          handler: handleNewOwner
+        - event: 'NewResolver(indexed bytes32,address)'
+          handler: handleNewResolver
+        - event: 'NewTTL(indexed bytes32,uint64)'
+          handler: handleNewTTL
+  - kind: ethereum/contract
+    name: ENSRegistryOld
+    network: fuji
+    source:
+      address: '0x1F68692D58bABeDC2549a49a2F73cf05fc078af1'
+      abi: EnsRegistry
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      file: ./src/ensRegistry.ts
+      entities:
+        - Domain
+        - Account
+        - Resolver
+      abis:
+        - name: EnsRegistry
+          file: ./abis/Registry.json
+      eventHandlers:
+        - event: 'Transfer(indexed bytes32,address)'
+          handler: handleTransferOldRegistry
+        - event: 'NewOwner(indexed bytes32,indexed bytes32,address)'
+          handler: handleNewOwnerOldRegistry
+        - event: 'NewResolver(indexed bytes32,address)'
+          handler: handleNewResolverOldRegistry
+        - event: 'NewTTL(indexed bytes32,uint64)'
+          handler: handleNewTTLOldRegistry
+  - kind: ethereum/contract
+    name: Resolver
+    network: fuji
+    source:
+      abi: Resolver
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      file: ./src/resolver.ts
+      entities:
+        - AddrChanged
+        - MulticoinAddrChanged
+        - NameChanged
+        - AbiChanged
+        - PubkeyChanged
+        - Textchanged
+        - ContenthashChanged
+        - InterfaceChanged
+        - AuthorisationChanged
+      abis:
+        - name: Resolver
+          file: ./abis/PublicResolver.json
+      eventHandlers:
+        - event: 'ABIChanged(indexed bytes32,indexed uint256)'
+          handler: handleABIChanged
+        - event: 'AddrChanged(indexed bytes32,address)'
+          handler: handleAddrChanged
+        - event: 'AddressChanged(indexed bytes32,uint256,bytes)'
+          handler: handleMulticoinAddrChanged
+        - event: 'AuthorisationChanged(indexed bytes32,indexed address,indexed address,bool)'
+          handler: handleAuthorisationChanged
+        - event: 'ContenthashChanged(indexed bytes32,bytes)'
+          handler: handleContentHashChanged
+        - event: 'InterfaceChanged(indexed bytes32,indexed bytes4,address)'
+          handler: handleInterfaceChanged
+        - event: 'NameChanged(indexed bytes32,string)'
+          handler: handleNameChanged
+        - event: 'PubkeyChanged(indexed bytes32,bytes32,bytes32)'
+          handler: handlePubkeyChanged
+        - event: 'TextChanged(indexed bytes32,indexed string,string)'
+          handler: handleTextChanged
+  - kind: ethereum/contract
+    name: BaseRegistrar
+    network: fuji
+    source:
+      address: '0xcfCBE461A002FFc38905e7A24b71E1Ad01980EB4'
+      abi: BaseRegistrar
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      file: ./src/ethRegistrar.ts
+      entities:
+        - Registration
+        - NameRegistered
+        - NameRenewed
+        - NameTransferred
+      abis:
+        - name: BaseRegistrar
+          file: ./abis/BaseRegistrar.json
+      eventHandlers:
+        - event: 'NameRegistered(indexed uint256,indexed address,uint256)'
+          handler: handleNameRegistered
+        - event: 'NameRenewed(indexed uint256,uint256)'
+          handler: handleNameRenewed
+        - event: 'Transfer(indexed address,indexed address,indexed uint256)'
+          handler: handleNameTransferred
+  - kind: ethereum/contract
+    name: EthRegistrarController
+    network: fuji
+    source:
+      address: '0x4BEf85c6063bf5b1fB13816f1d383C50aA698566'
+      abi: EthRegistrarController
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      file: ./src/ethRegistrar.ts
+      entities:
+        - Registration
+      abis:
+        - name: EthRegistrarController
+          file: ./abis/EthRegistrarController.json
+      eventHandlers:
+        - event: 'NameRegistered(string,indexed bytes32,indexed address,uint256,uint256)'
+          handler: handleNameRegisteredByController
+        - event: 'NameRenewed(string,indexed bytes32,uint256,uint256)'
+          handler: handleNameRenewedByController
+```
+
