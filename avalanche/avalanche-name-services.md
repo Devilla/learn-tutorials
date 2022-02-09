@@ -662,3 +662,123 @@ dataSources:
           handler: handleNameRenewedByController
 ```
 
+**Build and deploy subgraph**
+Build and check for errors in typescript it'll throw some type errors for some variables
+```
+TS2322: Type 'src/types/schema/Domain | null' is not assignable to type 'src/types/schema/Domain'.
+```
+
+Map these types for particular schema say Domain.owner, add `| null` in the get() and set() method as shown below
+
+```
+  get owner(): string | null {
+    let value = this.get("owner");
+    return value!.toString();
+  }
+```
+if !value is true you'll need to add `this.unset("owner")` and same for other property say `this.unset("property")` and else part is same everywhere, lookout for `value` datatype in `this.set("owner", Value.fromString(<string>value));`. It'll vary for diferrent datatypes say string, array, BigInt etc.
+```
+  set owner(value: string | null) {
+    if (!value) {
+      this.unset("owner");
+    } else {
+    this.set("owner", Value.fromString(<string>value));
+    }
+  }
+ ```
+ Run the build 
+ ```
+ $ yarn build
+ ```
+ 
+ Successfull Build output!
+```
+yarn run v1.22.17
+$ graph build
+  Skip migration: Bump mapping apiVersion from 0.0.1 to 0.0.2
+  Skip migration: Bump mapping apiVersion from 0.0.2 to 0.0.3
+  Skip migration: Bump mapping apiVersion from 0.0.3 to 0.0.4
+  Skip migration: Bump mapping apiVersion from 0.0.4 to 0.0.5
+  Skip migration: Bump mapping specVersion from 0.0.1 to 0.0.2
+✔ Apply migrations
+✔ Load subgraph from subgraph.yaml
+  Compile data source: ENSRegistry => build/ENSRegistry/ENSRegistry.wasm
+  Compile data source: ENSRegistryOld => build/ENSRegistry/ENSRegistry.wasm (already compiled)
+  Compile data source: Resolver => build/Resolver/Resolver.wasm
+  Compile data source: BaseRegistrar => build/BaseRegistrar/BaseRegistrar.wasm
+  Compile data source: EthRegistrarController => build/BaseRegistrar/BaseRegistrar.wasm (already compiled)
+✔ Compile subgraph
+  Copy schema file build/schema.graphql
+  Write subgraph file build/ENSRegistry/abis/Registry.json
+  Write subgraph file build/ENSRegistryOld/abis/Registry.json
+  Write subgraph file build/Resolver/abis/PublicResolver.json
+  Write subgraph file build/BaseRegistrar/abis/BaseRegistrar.json
+  Write subgraph file build/EthRegistrarController/abis/EthRegistrarController.json
+  Write subgraph manifest build/subgraph.yaml
+✔ Write compiled subgraph to build/
+```
+Build completed: /home/dev/workspace/ans/ans-subgraph/build/subgraph.yaml
+
+On successfull complation, deploy the sbgraph on fuji using the graph protocol
+ ```
+ yarn deploy
+ ```
+ 
+ Successfull deployment output:
+ ```
+ yarn run v1.22.17
+$ graph deploy --node https://api.thegraph.com/deploy/ devilla/ans --ipfs https://api.thegraph.com/ipfs/
+  Skip migration: Bump mapping apiVersion from 0.0.1 to 0.0.2
+  Skip migration: Bump mapping apiVersion from 0.0.2 to 0.0.3
+  Skip migration: Bump mapping apiVersion from 0.0.3 to 0.0.4
+  Skip migration: Bump mapping apiVersion from 0.0.4 to 0.0.5
+  Skip migration: Bump mapping specVersion from 0.0.1 to 0.0.2
+✔ Apply migrations
+✔ Load subgraph from subgraph.yaml
+  Compile data source: ENSRegistry => build/ENSRegistry/ENSRegistry.wasm
+  Compile data source: ENSRegistryOld => build/ENSRegistry/ENSRegistry.wasm (already compiled)
+  Compile data source: Resolver => build/Resolver/Resolver.wasm
+  Compile data source: BaseRegistrar => build/BaseRegistrar/BaseRegistrar.wasm
+  Compile data source: EthRegistrarController => build/BaseRegistrar/BaseRegistrar.wasm (already compiled)
+✔ Compile subgraph
+  Copy schema file build/schema.graphql
+  Write subgraph file build/ENSRegistry/abis/Registry.json
+  Write subgraph file build/ENSRegistryOld/abis/Registry.json
+  Write subgraph file build/Resolver/abis/PublicResolver.json
+  Write subgraph file build/BaseRegistrar/abis/BaseRegistrar.json
+  Write subgraph file build/EthRegistrarController/abis/EthRegistrarController.json
+  Write subgraph manifest build/subgraph.yaml
+✔ Write compiled subgraph to build/
+  Add file to IPFS build/schema.graphql
+                .. QmYTpNtiL3aowFvApEi8Lmy71dGVft51n19o8GEumZ2UPu
+  Add file to IPFS build/ENSRegistry/abis/Registry.json
+                .. QmRTphmVWBbKAVNwuc8tjJjdxzJsxB7ovpGHyUUCE6Rnsb
+  Add file to IPFS build/ENSRegistryOld/abis/Registry.json
+                .. QmRTphmVWBbKAVNwuc8tjJjdxzJsxB7ovpGHyUUCE6Rnsb (already uploaded)
+  Add file to IPFS build/Resolver/abis/PublicResolver.json
+                .. QmYyNtiPDxt8Y4Zmn1uHw5xaz2j8KFrndzftMgHhtzAcny
+  Add file to IPFS build/BaseRegistrar/abis/BaseRegistrar.json
+                .. QmWqXtDCvMtpnV28Z5f6P6rPCaCA2d8gKnacGaohDWgALN
+  Add file to IPFS build/EthRegistrarController/abis/EthRegistrarController.json
+                .. Qmb6zHLHHGd1wpe2CuyVijkPrxG1M9VZKwK7aGhY1o3xKf
+  Add file to IPFS build/ENSRegistry/ENSRegistry.wasm
+                .. Qmb4CJV77u8GKSQRfyLoxqMfYXh1cfDiq5r29Z1FdRmUwu
+  Add file to IPFS build/ENSRegistry/ENSRegistry.wasm
+                .. Qmb4CJV77u8GKSQRfyLoxqMfYXh1cfDiq5r29Z1FdRmUwu (already uploaded)
+  Add file to IPFS build/Resolver/Resolver.wasm
+                .. QmTxsfui3km5Ez9vAi6AS7nFSH4Thi6jB17ck4HHcFVNXA
+  Add file to IPFS build/BaseRegistrar/BaseRegistrar.wasm
+                .. QmZ62zsok1RcmZKLSKYFTVTaBiuQwg8LdbCkcCRpEXeXBM
+  Add file to IPFS build/BaseRegistrar/BaseRegistrar.wasm
+                .. QmZ62zsok1RcmZKLSKYFTVTaBiuQwg8LdbCkcCRpEXeXBM (already uploaded)
+✔ Upload subgraph to IPFS
+```
+Build completed: QmT6VYNbCfjUL2QJsNdPqU4Bnu1Fw3E5vWtfqMauA55zx5
+
+Deployed to https://thegraph.com/explorer/subgraph/devilla/ans
+
+Subgraph endpoints:
+Queries (HTTP):     https://api.thegraph.com/subgraphs/name/devilla/ans
+
+Subscriptions (WS): wss://api.thegraph.com/subgraphs/name/devilla/ans
+
