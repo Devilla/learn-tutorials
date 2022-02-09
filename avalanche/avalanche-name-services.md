@@ -29,7 +29,7 @@ subdomains - for themselves or others - as desired. For instance, if Dev owns 'd
 
 ANS has three main components: the `ans-contracts` , `ans-subgrapgh` and `ans-app` for their respective work like `registry of names`, `querying the data` and `user interaction` on Avalanche.
 
-**Introduction to smart contracts**
+## ANS Contracts
 
 Clone the [Git Repository](https://github.com/Devilla/ans-contracts) and [Create a Local Test Network](https://learn.figment.io/tutorials/create-a-local-test-network) following the tutorial.
 
@@ -71,7 +71,7 @@ For Fuji Testnet:
     }
 ```
 
-First, let's deploy the baseRegstrar contracts with 'avax' as top level domain from `deploy/basregistrar/00_deploy_base_registrar.js`
+First, let's **deploy the baseRegstrar contracts with 'avax'** as top level domain from `deploy/basregistrar/00_deploy_base_registrar.js`
 
 Import ethers library from hardhat
 ```
@@ -129,7 +129,7 @@ module.exports.tags = ['baseregistrar'];
 module.exports.dependencies = ['registry']
 ```
 
-Deploy Reverse Registrar contracts for `.avax` as top-level domain for registration from `deploy/basregistrar/10_deploy_reverse_registrar.js`.
+**Deploy Reverse Registrar contracts for registration** from `deploy/basregistrar/10_deploy_reverse_registrar.js`.
 
 Import the libraries and utils
 ```
@@ -175,7 +175,7 @@ module.exports.tags = ['reverse-registrar'];
 module.exports.dependencies = ['registry', 'public-resolver']
 ```
 
-Deploy `ETHRegistrarController` with  `StablePriceOracle` contracts for '.avax' as root domain
+**Deploy `ETHRegistrarController` with  `StablePriceOracle` contracts** for '.avax' as root domain from `deploy/ethregistrar/00_deploy_eth_registrar.js`
 
 Import the ethers library from hardhat package
 ```
