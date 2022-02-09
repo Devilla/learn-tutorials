@@ -71,84 +71,106 @@ For Fuji Testnet:
     }
 ```
 
-First, let's deploy the registry contracts with '.avax' in directory `contracts/registry/`
+First, let's deploy the baseRegstrar contracts with 'avax' as top level domain from `deploy/basregistrar/00_deploy_base_registrar.js`
 
+Import ethers library from hardhat
 ```
 const { ethers } = require("hardhat");
+```
+Create constants ZERO_ADDRESS, ZERO_HASH
+```
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000"
-const sha3 = require('web3-utils').sha3;
-
-module.exports = async ({getNamedAccounts, deployments, network}) => {
-    const {deploy} = deployments;
-    const {deployer, owner} = await getNamedAccounts();
-
-    const ens = await ethers.getContract('ENSRegistry')
-
-    await deploy('PublicResolver', {
-        from: deployer, 
-        args: [ens.address, ZERO_ADDRESS],
-        log: true
-    })
-
-    const resolver = await ethers.getContract('PublicResolver')
-
-    const transactions = []
-    transactions.push(await ens.setSubnodeOwner(ZERO_HASH, sha3('avax'), deployer))
-    transactions.push(await ens.setResolver(namehash.hash('avax'), resolver.address))
-    transactions.push(await resolver['setAddr(bytes32,address)'](namehash.hash('avax'), resolver.address))
-    console.log(`Waiting on settings to take place on resolvers ${transactions.length}`)
-    await Promise.all(transactions.map((tx) => tx.wait()));  
-
-}
-
-module.exports.tags = ['public-resolver'];
-module.exports.dependencies = ['registry']
 ```
-
-
-Deploy BaseRegistrar contracts for `.avax` as top-level domain for registration from directory `contracts/ethregistrar/`.
-
+Import ethernal, namehash and sha3 hashing methods from hardhat-ethernal, eth-ens-namehash, web3-utils packages respectively
 ```
-// import the libraries and utils
-const { ethers } = require("hardhat");
-const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
 const ethernal = require('hardhat-ethernal');
-
 const namehash = require('eth-ens-namehash');
 const sha3 = require('web3-utils').sha3;
+```
 
-module.exports = async ({getNamedAccounts, deployments, network}) => {
+Export modules for deployment BaseRegistrarImplementation and initialise deployments, deployer, owner and ENSRegistry
+```module.exports = async ({getNamedAccounts, deployments, network}) => {
     const {deploy} = deployments;
     const {deployer, owner} = await getNamedAccounts();
-    
-    // get ENSRegistry deployed contract
+
     const ens = await ethers.getContract('ENSRegistry')
-    
-    // deploy BaseRegistrar with ENSRegistry and `avax` as TLD
+```
+
+Deploy BaseRegistrarImplementation contract with params deployer, args as (ens.address, namehash.hash('avax')) and log as true
+```
     await deploy('BaseRegistrarImplementation', {
         from: deployer, 
         args: [ens.address, namehash.hash('avax')],
         log: true
     })
-      
-    // get BaseRegistrar deployment
+```
+Create constants `base` for BaseRegistrarImplementation and `transactions` array 
+```
     const base = await ethers.getContract('BaseRegistrarImplementation');
-
     const transactions = []
-    // add controller for BaseRegistrar
-    transactions.push(await base.addController(deployer))
-    
-    // set SubnodeOwner for ENSRegistry with 'avax' as sha3 hash and BaseRegistrar deployment
-    transactions.push(await ens.setSubnodeOwner(ZERO_HASH, sha3('avax'), base.address))
+```
 
+Push transactions to add Controller on base registrar and set Subnode Owner on ens registry
+```
+    transactions.push(await base.addController(owner, {from: deployer}))
+    transactions.push(await ens.setSubnodeOwner(ZERO_HASH, sha3('avax'), base.address))
+```
+
+Log while waiting for Promise for transaction to finish
+```
     console.log(`Waiting on ${transactions.length} transactions setting base registrar`);
     await Promise.all(transactions.map((tx) => tx.wait()));
 }
-
-
+```
+Export modules tags and dependencies for baseregistrar and registry
+```
 module.exports.tags = ['baseregistrar'];
 module.exports.dependencies = ['registry']
+```
+
+Deploy Reverse Registrar contracts for `.avax` as top-level domain for registration from `deploy/basregistrar/10_deploy_reverse_registrar.js`.
+
+Import the libraries and utils
+```
+const { ethers } = require("hardhat");
+const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
+const sha3 = require('web3-utils').sha3;
+const namehash = require('eth-ens-namehash');
+```
+Export module ReverseRegistrar deployment and initilise constant deployments, deployer and owner
+```
+module.exports = async ({getNamedAccounts, deployments, network}) => {
+    const {deploy} = deployments;
+    const {deployer, owner} = await getNamedAccounts();
+```
+Assign constants `ens` and `resolver` by getting contracts for ENSRegistry and PublicResolver respectively using ethers library
+```
+    const ens = await ethers.getContract('ENSRegistry');
+    const resolver = await ethers.getContract('PublicResolver');
+```
+Await deployment for ReverseRegistrar with account as deployer and args as `ens.address`, `resolver.address`
+```
+    await deploy('ReverseRegistrar', {
+        from: deployer, 
+        args:[ens.address, resolver.address]
+    })
+```
+Create constants `reverseRegistrar` for ReverseRegistrar and `transactions` array 
+```
+    const reverseRegistrar = await ethers.getContract('ReverseRegistrar');
+    const transactions = []
+```
+
+```
+    transactions.push(await ens.setSubnodeOwner(ZERO_HASH, sha3('reverse'), deployer))
+    transactions.push(await ens.setSubnodeOwner(namehash.hash('reverse'),sha3('addr'),reverseRegistrar.address))
+    console.log(`Waiting on settings to take place of reverse registrar ${transactions.length}`)
+    await Promise.all(transactions.map((tx) => tx.wait()));
+}
+
+module.exports.tags = ['reverse-registrar'];
+module.exports.dependencies = ['registry', 'public-resolver']
 ```
 Deploy `ETHRegistrarController` with  `StablePriceOracle` contracts for '.avax' as root domain
 
