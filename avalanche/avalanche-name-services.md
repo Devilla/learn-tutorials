@@ -470,6 +470,22 @@ and for fuji test network
 npx hardhat deploy --network fuji
 ```
 
+Deployment output:
+```
+reusing "BaseRegistrarImplementation" at 0x01EB97a856686a7ab01F8196015265Ef743b2672
+Waiting on 2 transactions setting base registrar
+reusing "DummyOracle" at 0xcfA95eb1dF4642310d7b6e0354419CacAee190E1
+reusing "StablePriceOracle" at 0x8F15e41e2F45914Cc3063586dB65D5033f5Eb8d6
+reusing "ETHRegistrarController" at 0x163CDD36Db18be7dd0E51f9CD03771CF843058Ee
+Waiting on settings to take place 3
+reusing "PublicResolver" at 0x171F9B5D86D25D9064F2c78E6Cc90ccEC907d6A4
+Waiting on settings to take place on resolvers 4
+Waiting on settings to take place of reverse registrar 2
+reusing "ReverseRegistrar" at 0xbAc25db0aD5D96B1fe3250a5335e25D62aB78f1C
+Waiting on settings to take place on reverse-registrar 3
+deploying "DefaultReverseResolver" (tx: 0xe6ab0be56dc99d4c06c1534b4a8fb5175ac9930d1e84a517ee83dfdb4c391888)...: deployed at 0xfa1a8df76f363067BE5d66066e2DCF563E81615E with 418037 gas
+```
+
 ## ANS Subgraph
 
 We will use [The Graph protocol](https://thegraph.com/docs) for quering address resources i.e. human-readable domain names (Eg. dev.avax) from the blockchain, access domains and transfer history.
