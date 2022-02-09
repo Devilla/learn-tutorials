@@ -504,7 +504,7 @@ This will start up a GraphiQL interface at http://127.0.0.1:8000/ in your browse
 or you can use Hosted Service provided by [thegraph protocol](https://thegraph.com/docs/en/hosted-service/what-is-hosted-service). Follow the docs and create your subgraph and add that in the `deploy` scrpts `package.json`.
 
 ```    
-"deploy": "graph deploy --node https://api.thegraph.com/deploy/ devilla/ans --ipfs https://api.thegraph.com/ipfs/",
+"deploy": "graph deploy --node https://api.thegraph.com/deploy/ <USERNAME>/<SUBGRAPH NAME> --ipfs https://api.thegraph.com/ipfs/",
 ```
 
 But before deploying, you need to map the contract ABIs and addresses for the fuji testnet in the `subgraph.yaml`
