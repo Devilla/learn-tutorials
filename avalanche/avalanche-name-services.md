@@ -82,15 +82,15 @@ Create constants ZERO_ADDRESS, ZERO_HASH
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000"
 ```
-Import ethernal, namehash and sha3 hashing methods from hardhat-ethernal, eth-ens-namehash, web3-utils packages respectively
+Import namehash and sha3 hashing methods from eth-ens-namehash, web3-utils packages respectively
 ```
-const ethernal = require('hardhat-ethernal');
 const namehash = require('eth-ens-namehash');
 const sha3 = require('web3-utils').sha3;
 ```
 
 Export modules for deployment BaseRegistrarImplementation and initialise deployments, deployer, owner and ENSRegistry
-```module.exports = async ({getNamedAccounts, deployments, network}) => {
+```
+module.exports = async ({getNamedAccounts, deployments, network}) => {
     const {deploy} = deployments;
     const {deployer, owner} = await getNamedAccounts();
 
@@ -352,7 +352,6 @@ const { ethers } = require("hardhat");
 
 const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
-const ethernal = require('hardhat-ethernal');
 module.exports = async ({getNamedAccounts, deployments, network}) => {
     const {deploy} = deployments;
     const {deployer, owner} = await getNamedAccounts();
