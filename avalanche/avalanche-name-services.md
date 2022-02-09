@@ -161,17 +161,20 @@ Create constants `reverseRegistrar` for ReverseRegistrar and `transactions` arra
     const reverseRegistrar = await ethers.getContract('ReverseRegistrar');
     const transactions = []
 ```
-
+Push transctions and map inside Promise.all() to setting Subnode Owner on reverse namehash for reverseRegistrar
 ```
     transactions.push(await ens.setSubnodeOwner(ZERO_HASH, sha3('reverse'), deployer))
     transactions.push(await ens.setSubnodeOwner(namehash.hash('reverse'),sha3('addr'),reverseRegistrar.address))
     console.log(`Waiting on settings to take place of reverse registrar ${transactions.length}`)
     await Promise.all(transactions.map((tx) => tx.wait()));
 }
-
+```
+Export module tags as 'reverse-registrar' and dependencies as 'registry', 'public-resolver'
+```
 module.exports.tags = ['reverse-registrar'];
 module.exports.dependencies = ['registry', 'public-resolver']
 ```
+
 Deploy `ETHRegistrarController` with  `StablePriceOracle` contracts for '.avax' as root domain
 
 Import the ethers library from hardhat package
@@ -453,3 +456,47 @@ module.exports.id = "root";
 module.exports.tags = ['root'];
 module.exports.dependencies = ['registry'];
 ```
+
+Compile and deploy smart contracts using hardhat on Fuji Testnet
+```
+npx harhat compile
+```
+After successfull compilation, deploy the contracts for development network
+```
+npx hardhat deploy --network devnet
+```
+and for fuji test network
+```
+npx hardhat deploy --network fuji
+```
+
+## ANS Subgraph
+
+We will use [The Graph protocol](https://thegraph.com/docs) for quering address resources i.e. human-readable domain names (Eg. dev.avax) from the blockchain, access domains and transfer history.
+
+Clone the [Git Repository](https://github.com/Devilla/ans-subgraph).
+
+```
+git clone https://github.com/Devilla/ans-subgraph
+```
+Go to the repository:
+```
+cd ans-subgraph
+```
+Install the required depencencies and run codegen
+```
+yarn
+
+yarn codegen
+```
+To get the subgraph working locally run:
+```
+yarn create-local
+```
+
+Then you can deploy the subgraph:
+```
+yarn deploy-local
+```
+
+This will start up a GraphiQL interface at http://127.0.0.1:8000/ in your browser, check it for querying the data.
